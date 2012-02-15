@@ -1,0 +1,28 @@
+
+getfeed is a RSS/Atom feed fetcher.
+
+This script fetches configured feeds, caches them and send new messages to
+external program.  Though, caching does not work yet.
+
+This software is initially intended to pipe feeds to a mail delivery agent to
+read them in your favourite mail client.
+
+There is another similar script, r2e, [1]. It is written in python too and uses
+the same feedparser [2], but it lacks some features I'd like to see.
+
+If you want any missing info on the project, just ask me. You may fill an issue
+form at bug tracker if you think that this info should be in README. Or you may
+email me directly. Please see BUGS section on how to do that.
+
+
+BUGS
+
+Please, report any bugs and desired features including spelling and grammar
+errors in both messages and README etc.
+
+To report a bug send e-mail to triumhiz@yandex.ru with subject starting with "[getfeed] " or submit new issue to http://github.com/triumhiz/getfeed/
+
+
+[1] http://www.allthingsrss.com/rss2email
+[2] http://code.google.com/p/feedparser/ http://pypi.python.org/pypi/feedparser
+
