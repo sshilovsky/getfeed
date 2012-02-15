@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__version__ = "0.1a"
+__version__ = "0.1+"
 __license__ = "BSD-4"
 __author__ = "Sergei Shilovsky <triumhiz@yandex.ru>"
 
@@ -91,7 +91,7 @@ def parse_config(config):
 argparser = argparse.ArgumentParser(description=
         'RSS/Atom feed fetcher and piper')
 argparser.add_argument('--version',action='version',
-        version='%(prog)s 0.1a')
+        version='%(prog)s '+__version__)
 argparser.add_argument('--rcfile','-r',action='append',
         help='use this config file instead of default one. '+
         'You may use this option more than once.')
@@ -111,6 +111,7 @@ def main():
 ### Feed parsing
 
 def process_feed(feed):
+    pprint(feed)
     url = feed.get('url')
     if url is None:
         warn("Feed without URL specified")
