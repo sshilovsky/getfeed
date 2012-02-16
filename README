@@ -16,7 +16,7 @@ email me directly. Please see BUGS section on how to do that.
 
 FILES
 
-getfeed.py - mail script executable
+getfeed.py - main script executable
 getfeed-9999.ebuild - gentoo ebuild for git HEAD (unfinished)
 
 BUGS
