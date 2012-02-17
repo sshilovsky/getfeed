@@ -17,8 +17,8 @@ the same feedparser [2], but it lacks some features I'd like to see, including:
   configuration files you want.
 * Unix-wayity: getfeed does only what it should do: it gets a feed, split it
   into separate messages and pipe them to external program. SMTP absence IS a
-  feature. Use sendmail, msmtp or other analogues for it. Mbox/maildir support
-  absence is a feature too. Use procmail, maildrop or other analogues for that.
+  feature. Use msmtp[4], sendmail[5] or other analogues for it. Mbox/maildir support
+  absence is a feature too. Use maildrop[6], procmail[7] or other analogues for that.
 * XDG-Basedir support.
 
 If you want any missing info on the project, just ask me. You may fill an issue
@@ -28,7 +28,7 @@ email me directly. Please see BUGS section on how to do that.
 USAGE
 
 See sample-config.yaml for the sample configuration. Request documentation if
-you want.
+you want it.
 
 Default configuration file location is '~/.config/getfeed/config.yaml'. You may
 tell getfeed to use another or other configuration files with '-r' command line
@@ -51,4 +51,8 @@ e-mail to triumhiz@yandex.ru with subject starting with "[getfeed] "
 [1] http://www.allthingsrss.com/rss2email
 [2] http://code.google.com/p/feedparser/ http://pypi.python.org/pypi/feedparser
 [3] http://pyropus.ca/software/getmail/
+[4] http://msmtp.sourceforge.net/
+[5] http://www.sendmail.org/
+[6] http://www.courier-mta.org/maildrop/
+[7] http://www.procmail.org/
 
