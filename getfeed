@@ -154,7 +154,9 @@ def process_feed(feed_conf):
         message = message.encode('utf-8')
         mda.stdin.write(message)
         mda.stdin.close()
-        mda.wait()
+        ret = mda.wait()
+        if ret != 0:
+            err('Error in dropper')
 
 
 if __name__ == '__main__':
