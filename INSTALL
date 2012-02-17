@@ -1,0 +1,15 @@
+PREREQUISITES
+
+* Python: 2.7
+    This software may work with previous Python versions, though it has not
+    been tested.
+    Python 3.* support is planned as soon as freedesktop.org's pyxdg
+    implementation supports it. Python 2.* support may be cancelled then.
+* Python libraries: pyyaml, pyxdg, feedparser
+
+INSTALLATION
+
+Just copy 'getfeed' script to some of your $PATH directories.
+
+If you are running gentoo, use ebuild included.
+

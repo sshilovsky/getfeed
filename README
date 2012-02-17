@@ -21,6 +21,11 @@ getfeed-9999.ebuild - gentoo ebuild for git HEAD (unfinished)
 
 BUGS
 
+* There is no corrent MIME types and character encodings interpretation yet. To
+be continued.
+
+* No configuration file format persistence is guaranteed at the moment.
+
 Please, report any bugs and desired features including spelling and grammar
 errors in both messages and README etc.
 

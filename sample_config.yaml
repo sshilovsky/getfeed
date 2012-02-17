@@ -1,0 +1,14 @@
+drops:
+  default:
+    command: "tee -a ~/getfeed.log"
+
+feeds:
+  - url: "http://bash.org.ru/rss/"
+    headers:
+        From: "bash.org.ru@ss-comp"
+        Subject: "[Bash.Org.Ru] {e.title}"
+    body: "{e.summary}" # This is default
+
+  # - url: "http://ithappens.ru/rss/"
+    # drop: "None"
+

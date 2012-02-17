@@ -1,11 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 __version__ = "0.1+"
 __license__ = "BSD-4"
 __author__ = "Sergei Shilovsky <triumhiz@yandex.ru>"
 
-from sys import stderr
+import sys
 from os import path
 import argparse
+import subprocess
 from pprint import pprint
 
 import yaml
@@ -15,16 +16,18 @@ import feedparser
 DEFAULT_CONFIG = "config.yaml"
 PROJECT_NAME = "getfeed"
 DROP_NONE = "None"
+DEFAULT_FROM = "getmail@localhost"
+DEFAULT_MDA = "cat > /dev/null" # TODO edit
 
 def err(msg):
-    print >> stderr, "ERROR: ", msg
+    print >> sys.stderr, "ERROR: ", msg
     exit(255)
 
 def warn(msg):
-    print >> stderr, "WARNING: ", msg
+    print >> sys.stderr, "WARNING: ", msg
 
 def info(msg):
-    print "INFO: ",msg
+    print >> sys.stderr, "INFO: ",msg
 
 ### Configuration parsing
 
@@ -68,15 +71,15 @@ def parse_config(config):
     if type(config) is not dict:
         err('Config file is not a dictionary')
 
-    drops = extract_records(config,'drops',dict)
-    feeds = extract_records(config,'feeds',list)
+    drops = extract_records(config,'drops',dict) or {}
+    feeds = extract_records(config,'feeds',list) or {}
 
     for i, feed in enumerate(feeds,start=1):
         if type(feed) is not dict:
             err('dict expected for feeds record element')
         drop_name = feed.get('drop','default')
         if drop_name == DROP_NONE:
-            drop = None
+            drop = {}
         else:
             drop = drops.get(drop_name,None)
             if drop is None:
@@ -110,14 +113,49 @@ def main():
 
 ### Feed parsing
 
-def process_feed(feed):
-    pprint(feed)
-    url = feed.get('url')
+def process_feed(feed_conf):
+    url = feed_conf.get('url')
     if url is None:
         warn("Feed without URL specified")
         return
-    d = feedparser.parse(url)
-    # TODO
+    body_template = feed_conf.get('body','{e.summary}')
+    header_templates = feed_conf.get('headers',{})
+    header_templates.setdefault('From',DEFAULT_FROM)
+    header_templates.setdefault('Subject','{e.title}')
+
+    feed = feedparser.parse(url)
+    for entry in feed['entries']:
+        patterns = {
+                'e': entry,
+                # 'e.summary': entry.summary,
+                # 'e.title': entry.title,
+                }
+        headers = {}
+        for header, template in header_templates.items():
+            template = template.decode()
+            headers[header] = template.format(**patterns)
+
+        body_template = body_template.decode()
+        body = body_template.format(**patterns)
+
+        message = u"{headers}\n{body}\n".format(
+                body = body,
+                headers = u''.join((
+                    u'{header}: {value}\n'.format(
+                        header=header,
+                        value=value)
+                    for header, value in headers.items()
+                )))
+
+        drop = feed_conf.get('drop') or {}
+        cmd = drop.get('command',DEFAULT_MDA)
+
+        mda = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
+        message = message.encode('utf-8')
+        mda.stdin.write(message)
+        mda.stdin.close()
+        mda.wait()
+
 
 if __name__ == '__main__':
     main()
