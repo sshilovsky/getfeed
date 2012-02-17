@@ -13,3 +13,8 @@ Just copy 'getfeed' script to some of your $PATH directories.
 
 If you are running gentoo, use ebuild included.
 
+FILES
+
+getfeed - main script executable
+getfeed-9999.ebuild - gentoo ebuild for git HEAD (unfinished)
+

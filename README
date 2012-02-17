@@ -8,16 +8,32 @@ This software is initially intended to pipe feeds to a mail delivery agent to
 read them in your favourite mail client.
 
 There is another similar script, r2e, [1]. It is written in python too and uses
-the same feedparser [2], but it lacks some features I'd like to see.
+the same feedparser [2], but it lacks some features I'd like to see, including:
+
+* getfeed acts mostly like a popular getmail[3].
+* Simple and powerful (YAML) configuration file format.
+* You may split all your feeds and destinations through your configuration
+  files the way you want. You can also call getfeed for only those
+  configuration files you want.
+* Unix-wayity: getfeed does only what it should do: it gets a feed, split it
+  into separate messages and pipe them to external program. SMTP absence IS a
+  feature. Use sendmail, msmtp or other analogues for it. Mbox/maildir support
+  absence is a feature too. Use procmail, maildrop or other analogues for that.
+* XDG-Basedir support.
 
 If you want any missing info on the project, just ask me. You may fill an issue
 form at bug tracker if you think that this info should be in README. Or you may
 email me directly. Please see BUGS section on how to do that.
 
-FILES
+USAGE
 
-getfeed.py - main script executable
-getfeed-9999.ebuild - gentoo ebuild for git HEAD (unfinished)
+See sample-config.yaml for the sample configuration. Request documentation if
+you want.
+
+Default configuration file location is '~/.config/getfeed/config.yaml'. You may
+tell getfeed to use another or other configuration files with '-r' command line
+parameters. Use "./" prefix to proceed a file from the current directory. If
+you don't the file will be looked at ~/.config/getfeed/ by default.
 
 BUGS
 
@@ -29,10 +45,10 @@ be continued.
 Please, report any bugs and desired features including spelling and grammar
 errors in both messages and README etc.
 
-To report a bug send e-mail to triumhiz@yandex.ru with subject starting with
-"[getfeed] " or submit new issue to http://github.com/triumhiz/getfeed/
-
+To report a bug submit new issue to http://github.com/triumhiz/getfeed/ or send
+e-mail to triumhiz@yandex.ru with subject starting with "[getfeed] "
 
 [1] http://www.allthingsrss.com/rss2email
 [2] http://code.google.com/p/feedparser/ http://pypi.python.org/pypi/feedparser
+[3] http://pyropus.ca/software/getmail/
 
