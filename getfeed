@@ -281,7 +281,6 @@ def get_feed_dbid(cache, feed):
             return row[0]
         cur.execute("""SELECT MAX(id) FROM feeds""")
         max = ((cur.fetchone() or 0)[0] or 0)+ 1
-        print max, hash
         cur.execute("""INSERT INTO feeds (id, version, hash)
                 VALUES (?, ?, ?)""", (max, LAST_FEED_VERSION, hash))
         return max
