@@ -12,10 +12,13 @@ KEYWORDS="~alpha ~amd64 ~arm ~ia64 ~ppc ~ppc64 ~sparc ~x86 ~x86-fbsd ~x86-freebs
 IUSE=""
 
 # TODO git/src_uri decision
-if [ ${PV} == 9999 ] ; then
+if [ ${PV} = 9999 ] ; then
 	inherit git-2
 	EGIT_REPO_URI="${HOMEPAGE}.git"
+	KEYWORDS=""
 else
+	KEYWORDS="~alpha ~amd64 ~arm ~ia64 ~ppc ~ppc64 ~sparc
+	~x86 ~x86-fbsd ~x86-freebsd ~amd64-linux ~x86-linux ~x86-solaris"
 	SRC_URI="" # TODO
 fi
 
@@ -33,6 +36,6 @@ src_install() {
 	insopts -m755
 	doins getfeed
 
-	dodoc README
+	dodoc TODO
 }
 

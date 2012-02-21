@@ -1,14 +1,44 @@
-drops:
-  default:
-    command: "tee -a ~/getfeed.log"
+caches: # Cache destinations section.
+  default:  # Special default cache destination.
+            # If a feed lacks 'cache' reference, it will take 'default' one.
+    host: "cache.db" # Sqlite database file name
+            # If 'host' contains any path separator character, a file will be
+            # looked for starting from the current directory. Otherwise,
+            # '~/.config/getfeed/' is default. In later releases, relative
+            # pathes will likely be started from the configuration file
+            # directory.
 
-feeds:
+  my_cache: # Another cache destination.
+    host: "/home/user/.cache.db"
+
+  # Default section contents:
+  # default:
+  #   host: "cache.db"
+  # none: # Used to turn caching off
+  #
+
+drops:  # Email destinations section.
+  default:  # Special default email destination.
+            # If a feed lacks 'drop' destination, it will take 'default' one.
+    command: "tee -a ~/getfeed.log"
+  
+  # Default section contents:
+  # default:
+  #   command: "tee -a ~/getfeed.log" # can be changed in later releases
+  # none:
+  #   command: "true"
+
+feeds: # Main section describing feeds to proceed.
   - url: "http://bash.org.ru/rss/"
     headers:
         From: "bash.org.ru@ss-comp"
-        Subject: "[Bash.Org.Ru] {e.title}"
+        Subject: "[Bash.Org.Ru] {e.title}" # Default is '{e.title}'
     body: "{e.summary}" # This is default
 
-  # - url: "http://ithappens.ru/rss/"
-    # drop: "None"
+  - url: "http://ithappens.ru/rss/" # Fetch only
+      cache: "none"
+      drop: "none"
+
+  - url: "http://zadolba.li/rss/" # Fetch and cache, but do not pipe.
+      drop: "none"
 

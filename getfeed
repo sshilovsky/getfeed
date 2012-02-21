@@ -4,10 +4,11 @@ __license__ = "BSD-4"
 __author__ = "Sergei Shilovsky <triumhiz@yandex.ru>"
 
 import sys
+import datetime
 from os import path
 import argparse
 import subprocess
-from pprint import pprint
+import sqlite3
 
 import yaml
 import xdg.BaseDirectory as xdgbase
@@ -15,9 +16,23 @@ import feedparser
 
 DEFAULT_CONFIG = "config.yaml"
 PROJECT_NAME = "getfeed"
-DROP_NONE = "None"
-DEFAULT_FROM = "getmail@localhost"
-DEFAULT_MDA = "cat > /dev/null" # TODO edit
+LAST_MESSAGE_VERSION = 0
+LAST_FEED_VERSION = 0
+
+NONE_NAME = "none"
+DEFAULT_NAME = "default"
+
+DROP_NONE = {"command":"true"}
+DROP_DEFAULT = {"command":"tee -a /tmp/getfeed.log"}
+
+CACHE_NONE = {}
+CACHE_DEFAULT = {"host":"cache.db"}
+
+DEFAULT_HEADER_TEMPLATES = {
+        "From":"{0}@localhost".format(PROJECT_NAME),
+        "Subject":"{e.title}",
+        }
+DEFAULT_BODY_TEMPLATE = "{e.summary}"
 
 def err(msg):
     print >> sys.stderr, "ERROR: ", msg
@@ -38,8 +53,7 @@ def get_config(configfile=None):
     in_configfile = configfile
     
     if path.sep not in configfile:
-        configfile = xdgbase.load_first_config(
-                path.join(PROJECT_NAME,configfile))
+        configfile = xdgbase.load_first_config(PROJECT_NAME,configfile)
 
     if configfile is None:
         warn('File "%s" not found'%in_configfile)
@@ -72,21 +86,38 @@ def parse_config(config):
         err('Config file is not a dictionary')
 
     drops = extract_records(config,'drops',dict) or {}
+    drops.setdefault(DEFAULT_NAME, DROP_DEFAULT)
+    drops.setdefault(NONE_NAME, DROP_NONE)
+
+    caches = extract_records(config,'caches',dict) or {}
+    caches.setdefault(DEFAULT_NAME, CACHE_DEFAULT)
+    caches.setdefault(NONE_NAME, CACHE_NONE)
+
     feeds = extract_records(config,'feeds',list) or {}
 
+    # TODO revise
     for i, feed in enumerate(feeds,start=1):
         if type(feed) is not dict:
             err('dict expected for feeds record element')
+
         drop_name = feed.get('drop','default')
-        if drop_name == DROP_NONE:
-            drop = {}
-        else:
-            drop = drops.get(drop_name,None)
-            if drop is None:
-                warn(('Drop record "%s" for feed #%s not found.\n'+
-                    'Supposing "%s"')
-                        % (drop_name, i, DROP_NONE))
+        drop = drops.get(drop_name,None)
+        if drop is None:
+            drop = NONE_NAME
+            warn(('Drop record "%s" for feed #%s not found.\n'+
+                'Supposing "%s"')
+                    % (drop_name, i, NONE_NAME))
         feed["drop"] = drop
+
+        cache_name = feed.get('cache','default')
+        cache = caches.get(cache_name, None)
+        if cache is None:
+            warn(('Cache record "%s" for feed #%s not found.\n'+
+                'Supposing "%s"')
+                    % (cache_name, i, NONE_NAME))
+            cache = NONE_NAME
+        feed["cache"] = cache
+
         yield feed
    
 
@@ -100,6 +131,7 @@ argparser.add_argument('--rcfile','-r',action='append',
         'You may use this option more than once.')
 
 def main():
+    global ctime
     args = argparser.parse_args()
     rcfiles = args.rcfile
     if rcfiles is None or len(rcfiles) == 0:
@@ -118,18 +150,34 @@ def process_feed(feed_conf):
     if url is None:
         warn("Feed without URL specified")
         return
-    body_template = feed_conf.get('body','{e.summary}')
-    header_templates = feed_conf.get('headers',{})
-    header_templates.setdefault('From',DEFAULT_FROM)
-    header_templates.setdefault('Subject','{e.title}')
 
     feed = feedparser.parse(url)
+
+    drop = feed_conf.get('drop')
+    drop_command = drop.get('command')
+
+    cache = feed_conf.get('cache')
+    if 'connection' not in cache:
+        connection = cache['connection'] = init_database(cache)
+    if connection is not None:
+        feed['dbid'] = get_feed_dbid(cache, feed)
+        feed['ctime'] = datetime.datetime.now()
+
+    body_template = feed_conf.get('body',DEFAULT_BODY_TEMPLATE)
+    header_templates = feed_conf.get('headers',{})
+    for i,j in DEFAULT_HEADER_TEMPLATES.items():
+        header_templates.setdefault(i, j)
+
     for entry in feed['entries']:
+        hashes = message_hash(feed,entry)
+        if hash_cached(cache, feed, hashes):
+            continue
+        
         patterns = {
                 'e': entry,
-                # 'e.summary': entry.summary,
-                # 'e.title': entry.title,
+                'f': feed,
                 }
+        
         headers = {}
         for header, template in header_templates.items():
             template = template.decode()
@@ -147,17 +195,139 @@ def process_feed(feed_conf):
                     for header, value in headers.items()
                 )))
 
-        drop = feed_conf.get('drop') or {}
-        cmd = drop.get('command',DEFAULT_MDA)
-
-        mda = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
+        mda = subprocess.Popen(drop_command, shell=True, stdin=subprocess.PIPE)
         message = message.encode('utf-8')
         mda.stdin.write(message)
         mda.stdin.close()
         ret = mda.wait()
         if ret != 0:
             err('Error in dropper')
+        cache_hash(cache, feed, hashes)
 
+
+### Caching
+def init_database(cache_conf):
+    host = cache_conf.get('host',None)
+    if host is None:
+        return
+    host = get_cache_file(host)
+    db = sqlite3.connect(host)
+    cur = db.cursor()
+    #cur.execute("""CREATE TABLE IF NOT EXISTS meta (
+    #id int PRIMARY KEY,
+    #version int
+    #)""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS feeds (
+    id int PRIMARY KEY,
+    version int,
+    hash int,
+    UNIQUE(version, hash)
+    )""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS messages (
+    feed int,
+    version int,
+    hash int,
+    ctime datetime,
+    FOREIGN KEY(feed) REFERENCES feeds(id),
+    PRIMARY KEY(feed, version, hash)
+    )""")
+    db.commit()
+    cur.close()
+    return db
+
+
+def get_cache_file(cachefile=None):
+    in_cachefile = cachefile
+    
+    if path.sep not in cachefile:
+        dir = xdgbase.save_data_path(PROJECT_NAME)
+        cachefile = path.join(dir,cachefile)
+
+    if cachefile is None:
+        warn('File "%s" not found'%in_configfile)
+    
+    return cachefile
+
+
+def message_hash(feed, message):
+    # TODO edit hash function
+    hashes = []
+    # Version 0
+    hashes.append(hash(message.title) ^ hash(message.summary))
+
+    return hashes
+
+
+def feed_hash(feed):
+    hashes = []
+    # Version 0
+    hashes.append(hash(feed['url']))
+
+    return hashes
+
+
+def get_feed_dbid(cache, feed):
+        # TODO feed hash versions
+    hash = feed_hash(feed)[0]
+    connection = cache.get('connection',None)
+    if connection is None:
+        return False
+    cur = connection.cursor()
+    try:
+        cur.execute("""SELECT id FROM feeds WHERE hash = ?""", (hash,))
+        for row in cur:
+            return row[0]
+        cur.execute("""SELECT MAX(id) FROM feeds WHERE hash = ?""", (hash,))
+        max = ((cur.fetchone() or 0)[0] or 0)+ 1
+        cur.execute("""INSERT INTO feeds (id, version, hash)
+                VALUES (?, ?, ?)""", (max, LAST_FEED_VERSION, hash))
+        return max
+    except:
+        connection.rollback()
+        raise
+    finally:
+        cur.close()
+        connection.commit()
+
+
+def hash_cached(cache, feed, hashes):
+    connection = cache.get('connection',None)
+    if connection is None:
+        return False
+    cur = connection.cursor()
+    try:
+        for version, hash in enumerate(hashes):
+            cur.execute("""SELECT COUNT(*) FROM messages WHERE
+                feed = ? AND version = ? AND hash = ?""",
+                (feed['dbid'], version, hash))
+            result = cur.fetchone()[0]
+            if result >= 1:
+                return True
+
+        return False
+    except:
+        connection.rollback()
+        raise
+    finally:
+        cur.close()
+        connection.commit()
+
+
+def cache_hash(cache, feed, hashes):
+    connection = cache.get('connection',None)
+    if connection is None:
+        return False
+    cur = connection.cursor()
+    try:
+        cur.execute("""INSERT INTO messages (feed, version, hash, ctime)
+        VALUES (?, ?, ?, ?)""", (feed['dbid'],
+            LAST_MESSAGE_VERSION, hashes[LAST_MESSAGE_VERSION], feed['ctime']))
+    except:
+        connection.rollback()
+        raise
+    finally:
+        cur.close()
+        connection.commit()
 
 if __name__ == '__main__':
     main()

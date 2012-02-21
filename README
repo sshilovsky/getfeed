@@ -1,8 +1,8 @@
 
 getfeed is a RSS/Atom feed fetcher.
 
-This script fetches configured feeds, caches them and send new messages to
-external program.  Though, caching does not work yet.
+This script fetches configured feeds, caches their messages and sends new
+ones to an external program.
 
 This software is initially intended to pipe feeds to a mail delivery agent to
 read them in your favourite mail client.
@@ -15,10 +15,11 @@ the same feedparser [2], but it lacks some features I'd like to see, including:
 * You may split all your feeds and destinations through your configuration
   files the way you want. You can also call getfeed for only those
   configuration files you want.
-* Unix-wayity: getfeed does only what it should do: it gets a feed, split it
-  into separate messages and pipe them to external program. SMTP absence IS a
-  feature. Use msmtp[4], sendmail[5] or other analogues for it. Mbox/maildir support
-  absence is a feature too. Use maildrop[6], procmail[7] or other analogues for that.
+* Unix-wayity: getfeed does only what it should do: it gets a feed, splits it
+  into separate messages and pipes them to external program. SMTP absence IS a
+  feature. Use msmtp[4], sendmail[5] or other analogues for it. Mbox/maildir
+  support absence is a feature too. Use maildrop[6], procmail[7] or other
+  analogues for that.
 * XDG-Basedir support.
 
 If you want any missing info on the project, just ask me. You may fill an issue
@@ -35,12 +36,14 @@ tell getfeed to use another or other configuration files with '-r' command line
 parameters. Use "./" prefix to proceed a file from the current directory. If
 you don't the file will be looked at ~/.config/getfeed/ by default.
 
+Use 'getfeed --help' for details.
+
 BUGS
 
-* There is no corrent MIME types and character encodings interpretation yet. To
-be continued.
-
-* No configuration file format persistence is guaranteed at the moment.
+* There may be no corrent MIME types and character encodings interpretation
+yet. To be continued.
+* No configuration file format stability is guaranteed at the moment. Though
+database format will always be backwards-compatible.
 
 Please, report any bugs and desired features including spelling and grammar
 errors in both messages and README etc.

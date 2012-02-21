@@ -1,0 +1,11 @@
+* Reintriduce "None" drop.
+* headers case insensitivity ?
+* MIME-types and character encodings
+* exceptional events. including persistent caching
+* --cache-only option
+* --empty-cache option
+* database format versioning
+* hash_cached() funcion memoizing
+* check db consistency (including db version and hashes versions)
+*   and --no-check option
+
