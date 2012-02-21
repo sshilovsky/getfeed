@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-__version__ = "0.1+"
+__version__ = "0.2.1_alpha"
 __license__ = "BSD-4"
 __author__ = "Sergei Shilovsky <triumhiz@yandex.ru>"
 
@@ -159,6 +159,8 @@ def process_feed(feed_conf):
     cache = feed_conf.get('cache')
     if 'connection' not in cache:
         connection = cache['connection'] = init_database(cache)
+    else:
+        connection = cache['connection']
     if connection is not None:
         feed['dbid'] = get_feed_dbid(cache, feed)
         feed['ctime'] = datetime.datetime.now()
@@ -277,8 +279,9 @@ def get_feed_dbid(cache, feed):
         cur.execute("""SELECT id FROM feeds WHERE hash = ?""", (hash,))
         for row in cur:
             return row[0]
-        cur.execute("""SELECT MAX(id) FROM feeds WHERE hash = ?""", (hash,))
+        cur.execute("""SELECT MAX(id) FROM feeds""")
         max = ((cur.fetchone() or 0)[0] or 0)+ 1
+        print max, hash
         cur.execute("""INSERT INTO feeds (id, version, hash)
                 VALUES (?, ?, ?)""", (max, LAST_FEED_VERSION, hash))
         return max

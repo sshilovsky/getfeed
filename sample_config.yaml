@@ -36,9 +36,9 @@ feeds: # Main section describing feeds to proceed.
     body: "{e.summary}" # This is default
 
   - url: "http://ithappens.ru/rss/" # Fetch only
-      cache: "none"
-      drop: "none"
+    cache: "none"
+    drop: "none"
 
   - url: "http://zadolba.li/rss/" # Fetch and cache, but do not pipe.
-      drop: "none"
+    drop: "none"
 
