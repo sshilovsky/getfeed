@@ -31,6 +31,7 @@ CACHE_DEFAULT = {"host":"cache.db"}
 DEFAULT_HEADER_TEMPLATES = {
         "From":"{0}@localhost".format(PROJECT_NAME),
         "Subject":"{e.title}",
+        "Date":"{e.updated}",
         }
 DEFAULT_BODY_TEMPLATE = "{e.summary}"
 

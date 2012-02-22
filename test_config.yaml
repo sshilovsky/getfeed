@@ -1,0 +1,12 @@
+caches:
+  default:
+    host: "~/getfeed-dev.cache"
+
+drops:
+  default:
+    command: "cat"
+
+feeds:
+  - url: "/home/shoutt/bashorgru.rss"
+    cache: "none"
+

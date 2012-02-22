@@ -1,11 +1,15 @@
+* proper feed message handling
 * MIME-types and character encodings
 * Documentation, incl. man & CONFIG
+* progress indicator and info/debug output
 * --cache-only option, --empty-cache options
 * exceptional events. including persistent caching
 * concurrent getfeed calls
+* concurrent fetching/dropping
 * different db backends or sqlite optimization
 * headers case insensitivity ?
 * hash_cached() function memoizing ?
 * check db consistency (including db version and hashes versions)
 *   and --no-check option
 
+* ?? xapian locks
