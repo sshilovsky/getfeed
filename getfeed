@@ -244,7 +244,7 @@ def update_db_version(conn,cur):
         else: # Table exist: version 1+
             old_version = result[0]
             if old_version > LAST_DB_VERSION:
-                raise Exception("Database version is more recent than supported one. "
+                err("Database version is more recent than supported one. "
                         + "Please, upgrade software")
             elif old_version < LAST_DB_VERSION:
                 old_version = result[0]
@@ -315,9 +315,9 @@ def message_hash(feed, message):
     # TODO edit hash function
     hashes = []
     # Version 0
-    hashes.append(hash(message.title) ^ hash(message.summary))
+    hashes.append(str(hash(message.title) ^ hash(message.summary)))
 
-    return str(hashes)
+    return hashes
 
 
 def feed_hash(feed):
