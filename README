@@ -51,6 +51,9 @@ errors in both messages and README etc.
 To report a bug submit new issue to http://github.com/triumhiz/getfeed/ or send
 e-mail to triumhiz@yandex.ru with subject starting with "[getfeed] "
 
+Please attach your configuration file and related cache databases if they may
+matter.
+
 [1] http://www.allthingsrss.com/rss2email
 [2] http://code.google.com/p/feedparser/ http://pypi.python.org/pypi/feedparser
 [3] http://pyropus.ca/software/getmail/
