@@ -1,6 +1,6 @@
 caches:
   default:
-    host: "~/getfeed-dev.cache"
+    host: "./test_cache.db"
 
 drops:
   default:
@@ -8,5 +8,4 @@ drops:
 
 feeds:
   - url: "/home/shoutt/bashorgru.rss"
-    cache: "none"
 

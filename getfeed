@@ -18,6 +18,7 @@ DEFAULT_CONFIG = "config.yaml"
 PROJECT_NAME = "getfeed"
 LAST_MESSAGE_VERSION = 0
 LAST_FEED_VERSION = 0
+LAST_DB_VERSION = 1
 
 NONE_NAME = "none"
 DEFAULT_NAME = "default"
@@ -163,7 +164,7 @@ def process_feed(feed_conf):
     else:
         connection = cache['connection']
     if connection is not None:
-        feed['dbid'] = get_feed_dbid(cache, feed)
+        feed['dbid'] = get_feed_dbid(cache, feed_conf)
         feed['ctime'] = datetime.datetime.now()
 
     body_template = feed_conf.get('body',DEFAULT_BODY_TEMPLATE)
@@ -216,27 +217,85 @@ def init_database(cache_conf):
     host = get_cache_file(host)
     db = sqlite3.connect(host)
     cur = db.cursor()
-    #cur.execute("""CREATE TABLE IF NOT EXISTS meta (
-    #id int PRIMARY KEY,
-    #version int
-    #)""")
-    cur.execute("""CREATE TABLE IF NOT EXISTS feeds (
-    id int PRIMARY KEY,
-    version int,
-    hash int,
-    UNIQUE(version, hash)
-    )""")
-    cur.execute("""CREATE TABLE IF NOT EXISTS messages (
-    feed int,
-    version int,
-    hash int,
-    ctime datetime,
-    FOREIGN KEY(feed) REFERENCES feeds(id),
-    PRIMARY KEY(feed, version, hash)
-    )""")
-    db.commit()
+    # Version updating
+    update_db_version(db, cur)
+
     cur.close()
     return db
+
+
+def update_db_version(conn,cur):
+    try:
+        cur.execute("""CREATE TABLE IF NOT EXISTS meta (version int)""");
+        cur.execute("""SELECT version FROM meta""");
+        result = cur.fetchone()
+        if result is None: # Table was absent: either version 0 or new db
+            cur.execute("""INSERT INTO meta (version)
+            VALUES (?)""", (LAST_DB_VERSION,))
+
+            try:
+                create_table_feeds(conn, cur)
+            except sqlite3.OperationalError: # Table 'feeds' already exists
+                old_version = 0 # => version 0 db
+            else: # Table 'feeds' was absent
+                old_version = -1 # => new db
+                create_table_messages(conn, cur)
+                return
+        else: # Table exist: version 1+
+            old_version = result[0]
+            if old_version > LAST_DB_VERSION:
+                raise Exception("Database version is more recent than supported one. "
+                        + "Please, upgrade software")
+            elif old_version < LAST_DB_VERSION:
+                old_version = result[0]
+                cur.execute("""UPDATE meta SET version = ?""",
+                        (LAST_DB_VERSION,))
+            else:
+                return
+
+        print "Old db version:", old_version
+        print "Needs upgrading to:", LAST_DB_VERSION
+
+        if old_version < 1:
+            convert_table_hashes_to_varchar32(conn,cur,old_version)
+    except:
+        conn.rollback()
+        raise
+    finally:
+        conn.commit()
+
+
+def create_table_feeds(conn, cur):
+    cur.execute("""CREATE TABLE feeds (
+    id int PRIMARY KEY,
+    version int,
+    hash VARCHAR(32),
+    UNIQUE(version, hash)
+    )""")
+    
+
+def create_table_messages(conn, cur):
+    cur.execute("""CREATE TABLE messages (
+    feed int,
+    version int,
+    hash VARCHAR(32),
+    ctime DATETIME,
+    FOREIGN KEY(feed) REFERENCES feeds(id),
+    PRIMARY KEY(feed, version, hash))""")
+
+
+def convert_table_hashes_to_varchar32(conn,cur,old_version):
+    cur.execute("""ALTER TABLE feeds RENAME TO feeds_v0""")
+    create_table_feeds(conn, cur)
+    cur.execute("""INSERT INTO feeds (id, version, hash)
+            SELECT id, version, hash FROM feeds_v0""")
+    cur.execute("""DROP TABLE feeds_v0""")
+
+    cur.execute("""ALTER TABLE messages RENAME TO messages_v0""")
+    create_table_messages(conn, cur)
+    cur.execute("""INSERT INTO messages (feed, version, hash, ctime)
+            SELECT feed, version, hash, ctime FROM messages_v0""")
+    cur.execute("""DROP TABLE messages_v0""")
 
 
 def get_cache_file(cachefile=None):
@@ -258,13 +317,13 @@ def message_hash(feed, message):
     # Version 0
     hashes.append(hash(message.title) ^ hash(message.summary))
 
-    return hashes
+    return str(hashes)
 
 
 def feed_hash(feed):
     hashes = []
     # Version 0
-    hashes.append(hash(feed['url']))
+    hashes.append(str(hash(feed['url'])))
 
     return hashes
 

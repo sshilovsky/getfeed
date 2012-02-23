@@ -1,0 +1,45 @@
+### DB Vesrion 1
+
+CREATE TABLE meta (
+    version int);
+
+INSERT INTO "meta" VALUES(1);
+
+CREATE TABLE feeds (
+    id int PRIMARY KEY,
+    version int,
+    hash VARCHAR(32),
+    UNIQUE(version, hash)
+    );
+
+CREATE TABLE messages (
+    feed int,
+    version int,
+    hash VARCHAR(32),
+    ctime DATETIME,
+    FOREIGN KEY(feed) REFERENCES feeds(id),
+    PRIMARY KEY(feed, version, hash));
+
+### Feed Hash Version 0
+hash(feed['url'])
+
+### Message Hash Version 0
+hash(message.title) ^ hash(message.summary)
+
+### DB Version 0
+
+CREATE TABLE feeds (
+    id int PRIMARY KEY,
+    version int,
+    hash int,
+    UNIQUE(version, hash)
+    );
+
+CREATE TABLE messages (
+    feed int,
+    version int,
+    hash int,
+    ctime datetime,
+    FOREIGN KEY(feed) REFERENCES feeds(id),
+    PROMARY KEY(feed, version, hash)
+    );
