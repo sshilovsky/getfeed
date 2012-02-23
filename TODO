@@ -1,4 +1,5 @@
 * !! normal id's
+* clearing old database records
 * proper feed message handling
 * MIME-types and character encodings
 * Documentation, incl. man & CONFIG

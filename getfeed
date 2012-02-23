@@ -6,6 +6,7 @@ __author__ = "Sergei Shilovsky <triumhiz@yandex.ru>"
 import sys
 import datetime
 from os import path
+import hashlib
 import argparse
 import subprocess
 import sqlite3
@@ -16,9 +17,10 @@ import feedparser
 
 DEFAULT_CONFIG = "config.yaml"
 PROJECT_NAME = "getfeed"
-LAST_MESSAGE_VERSION = 0
-LAST_FEED_VERSION = 0
+LAST_MESSAGE_HASH_VERSION = 1
+LAST_FEED_HASH_VERSION = 1
 LAST_DB_VERSION = 1
+MD5_ENCODING = "utf8"
 
 NONE_NAME = "none"
 DEFAULT_NAME = "default"
@@ -173,7 +175,7 @@ def process_feed(feed_conf):
         header_templates.setdefault(i, j)
 
     for entry in feed['entries']:
-        hashes = message_hash(feed,entry)
+        hashes = tuple(message_hash(feed, entry))
         if hash_cached(cache, feed, hashes):
             continue
         
@@ -253,11 +255,13 @@ def update_db_version(conn,cur):
             else:
                 return
 
-        print "Old db version:", old_version
-        print "Needs upgrading to:", LAST_DB_VERSION
+        info("Old db version: %s"%old_version)
+        info("Needs upgrading to: %s"%LAST_DB_VERSION)
 
         if old_version < 1:
             convert_table_hashes_to_varchar32(conn,cur,old_version)
+
+        info("Done")
     except:
         conn.rollback()
         raise
@@ -316,33 +320,53 @@ def message_hash(feed, message):
     hashes = []
     # Version 0
     hashes.append(str(hash(message.title) ^ hash(message.summary)))
+    # Version 1
+    hashes.append(hashlib.md5((message.title+u'\u9256'+message.summary).
+        encode(MD5_ENCODING)).hexdigest())
 
     return hashes
 
 
-def feed_hash(feed):
+def feed_hash(feed_conf):
     hashes = []
     # Version 0
-    hashes.append(str(hash(feed['url'])))
+    hashes.append(str(hash(feed_conf['url'])))
+    # Version 1
+    hashes.append(hashlib.md5(feed_conf['url'].
+        encode(MD5_ENCODING)).hexdigest())
 
     return hashes
 
 
 def get_feed_dbid(cache, feed):
-        # TODO feed hash versions
-    hash = feed_hash(feed)[0]
     connection = cache.get('connection',None)
     if connection is None:
         return False
     cur = connection.cursor()
+
+    hashes = tuple(feed_hash(feed))
     try:
-        cur.execute("""SELECT id FROM feeds WHERE hash = ?""", (hash,))
-        for row in cur:
-            return row[0]
+        for version, hash in enumerate(hashes):
+            cur.execute("""SELECT id FROM feeds
+            WHERE version = ? AND hash = ?""", (version, hash))
+            result = cur.fetchone()
+            if result is not None:
+                feed_id = result[0]
+                if version < LAST_FEED_HASH_VERSION:
+                    cur.execute("""UPDATE feeds SET version = ?, hash = ?
+                    WHERE id = ?""", (len(hashes)-1, hashes[-1],
+                        feed_id))
+                return feed_id
+
         cur.execute("""SELECT MAX(id) FROM feeds""")
-        max = ((cur.fetchone() or 0)[0] or 0)+ 1
+        result = cur.fetchone()
+        if result is None:
+            max = 0
+        else:
+            max = result[0] or 0
+        max += 1
         cur.execute("""INSERT INTO feeds (id, version, hash)
-                VALUES (?, ?, ?)""", (max, LAST_FEED_VERSION, hash))
+        VALUES (?, ?, ?)""", (max, len(hashes)-1, hashes[-1]))
         return max
     except:
         connection.rollback()
@@ -364,6 +388,12 @@ def hash_cached(cache, feed, hashes):
                 (feed['dbid'], version, hash))
             result = cur.fetchone()[0]
             if result >= 1:
+                if version < LAST_MESSAGE_HASH_VERSION:
+                    cur.execute("""UPDATE messages
+                    SET version = ?, hash = ?
+                    WHERE feed = ? AND version = ? AND hash = ?""",
+                    (LAST_MESSAGE_HASH_VERSION, hashes[-1],
+                        feed['dbid'], version, hash))
                 return True
 
         return False
@@ -382,8 +412,8 @@ def cache_hash(cache, feed, hashes):
     cur = connection.cursor()
     try:
         cur.execute("""INSERT INTO messages (feed, version, hash, ctime)
-        VALUES (?, ?, ?, ?)""", (feed['dbid'],
-            LAST_MESSAGE_VERSION, hashes[LAST_MESSAGE_VERSION], feed['ctime']))
+        VALUES (?, ?, ?, ?)""", (feed['dbid'], LAST_MESSAGE_HASH_VERSION,
+            hashes[LAST_MESSAGE_HASH_VERSION], feed['ctime']))
     except:
         connection.rollback()
         raise

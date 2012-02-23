@@ -7,5 +7,6 @@ drops:
     command: "cat"
 
 feeds:
-  - url: "/home/shoutt/bashorgru.rss"
+  #- url: "/home/shoutt/bashorgru.rss"
+  - url: "http://bash.org.ru/rss/"
 

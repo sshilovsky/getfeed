@@ -1,3 +1,9 @@
+### Message Hash Version 1
+__import__(hashlib).md5().hexdigest()
+
+### Feed Hash Version 1
+__import__(hashlib).md5(message.title+u"\u9256"+message.summary).hexdigest()
+
 ### DB Vesrion 1
 
 CREATE TABLE meta (
