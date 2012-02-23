@@ -40,10 +40,10 @@ Use 'getfeed --help' for details.
 
 BUGS
 
-* There may be no corrent MIME types and character encodings interpretation
+* There may be no correct MIME types and character encodings interpretation
 yet. To be continued.
 * No configuration file format stability is guaranteed at the moment. Though
-database format will always be backwards-compatible.
+database format will always be backward compatible.
 
 Please, report any bugs and desired features including spelling and grammar
 errors in both messages and README etc.
