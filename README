@@ -1,4 +1,3 @@
-
 getfeed is a RSS/Atom feed fetcher.
 
 This script fetches configured feeds, caches their messages and sends new
@@ -48,8 +47,8 @@ database format will always be backward compatible.
 Please, report any bugs and desired features including spelling and grammar
 errors in both messages and README etc.
 
-To report a bug submit new issue to http://github.com/triumhiz/getfeed/ or send
-e-mail to triumhiz@yandex.ru with subject starting with "[getfeed] "
+To report a bug submit new issue to http://github.com/sshilovsky/getfeed/ or send
+e-mail to sshilovsky@gmail.com with subject starting with "[getfeed] "
 
 Please attach your configuration file and related cache databases if they may
 matter.
