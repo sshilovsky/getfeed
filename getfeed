@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+
 __version__ = "0.2.99+"
 __license__ = "BSD-4"
 __author__ = "Sergei Shilovsky <sshilovsky@gmail.com>"
@@ -25,63 +26,69 @@ MD5_ENCODING = "utf8"
 NONE_NAME = "none"
 DEFAULT_NAME = "default"
 
-DROP_NONE = {"command":"true"}
-DROP_DEFAULT = {"command":"tee -a /tmp/getfeed.log"}
+DROP_NONE = {"command": "true"}
+DROP_DEFAULT = {"command": "tee -a /tmp/getfeed.log"}
 
 CACHE_NONE = {}
-CACHE_DEFAULT = {"host":"cache.db"}
+CACHE_DEFAULT = {"host": "cache.db"}
 
 DEFAULT_HEADER_TEMPLATES = {
-        "From":"{0}@localhost".format(PROJECT_NAME),
-        "Subject":"{e.title}",
-        "Date":"{e.updated}",
-        }
+    "From": "{0}@localhost".format(PROJECT_NAME),
+    "Subject": "{e.title}",
+    "Date": "{e.updated}",
+}
 DEFAULT_BODY_TEMPLATE = "{e.summary}"
+
 
 def err(msg):
     print >> sys.stderr, "ERROR: ", msg
     exit(255)
 
+
 def warn(msg):
     print >> sys.stderr, "WARNING: ", msg
 
+
 def info(msg):
-    print >> sys.stderr, "INFO: ",msg
+    print >> sys.stderr, "INFO: ", msg
 
 ### Configuration parsing
+
 
 def get_config(configfile=None):
     if configfile is None:
         configfile = DEFAULT_CONFIG
 
     in_configfile = configfile
-    
+
     if path.sep not in configfile:
-        configfile = xdgbase.load_first_config(PROJECT_NAME,configfile)
+        configfile = xdgbase.load_first_config(PROJECT_NAME, configfile)
 
     if configfile is None:
-        warn('File "%s" not found'%in_configfile)
-    
+        warn('File "%s" not found' % in_configfile)
+
     try:
         f = None
         f = open(configfile)
         return yaml.load(f)
     except:
-        warn('Error loading/parsing "%s"'%in_configfile)
+        warn('Error loading/parsing "%s"' % in_configfile)
     finally:
         if f is not None:
             f.close()
 
-def extract_records(config,key,req_type):
+
+def extract_records(config, key, req_type):
     # TODO normal error and warning messages
     l = config.get(key)
     t = type(l)
     if t is not req_type and l is not None:
-        err('%s expected for "%s" key'%(req_type.__name__,key))
+        err('%s expected for "%s" key' % (req_type.__name__, key))
     if l is None or len(l) == 0:
-        warn('empty %s for "%s" key'%(req_type.__name__,key))
+        warn('empty %s for "%s" key' % (req_type.__name__, key))
 
     return l
+
 
 def parse_config(config):
     if config is None:
@@ -89,50 +96,51 @@ def parse_config(config):
     if type(config) is not dict:
         err('Config file is not a dictionary')
 
-    drops = extract_records(config,'drops',dict) or {}
+    drops = extract_records(config, 'drops', dict) or {}
     drops.setdefault(DEFAULT_NAME, DROP_DEFAULT)
     drops.setdefault(NONE_NAME, DROP_NONE)
 
-    caches = extract_records(config,'caches',dict) or {}
+    caches = extract_records(config, 'caches', dict) or {}
     caches.setdefault(DEFAULT_NAME, CACHE_DEFAULT)
     caches.setdefault(NONE_NAME, CACHE_NONE)
 
-    feeds = extract_records(config,'feeds',list) or {}
+    feeds = extract_records(config, 'feeds', list) or {}
 
     # TODO revise
-    for i, feed in enumerate(feeds,start=1):
+    for i, feed in enumerate(feeds, start=1):
         if type(feed) is not dict:
             err('dict expected for feeds record element')
 
-        drop_name = feed.get('drop','default')
-        drop = drops.get(drop_name,None)
+        drop_name = feed.get('drop', 'default')
+        drop = drops.get(drop_name, None)
         if drop is None:
             drop = NONE_NAME
-            warn(('Drop record "%s" for feed #%s not found.\n'+
-                'Supposing "%s"')
-                    % (drop_name, i, NONE_NAME))
+            warn(('Drop record "%s" for feed #%s not found.\n' +
+                  'Supposing "%s"')
+                 % (drop_name, i, NONE_NAME))
         feed["drop"] = drop
 
-        cache_name = feed.get('cache','default')
+        cache_name = feed.get('cache', 'default')
         cache = caches.get(cache_name, None)
         if cache is None:
-            warn(('Cache record "%s" for feed #%s not found.\n'+
-                'Supposing "%s"')
-                    % (cache_name, i, NONE_NAME))
+            warn(('Cache record "%s" for feed #%s not found.\n' +
+                  'Supposing "%s"')
+                 % (cache_name, i, NONE_NAME))
             cache = NONE_NAME
         feed["cache"] = cache
 
         yield feed
-   
+
 
 ### Arguments parsing
 argparser = argparse.ArgumentParser(description=
-        'RSS/Atom feed fetcher and piper')
-argparser.add_argument('--version',action='version',
-        version='%(prog)s '+__version__)
-argparser.add_argument('--rcfile','-r',action='append',
-        help='use this config file instead of default one. '+
-        'You may use this option more than once.')
+                                    'RSS/Atom feed fetcher and piper')
+argparser.add_argument('--version', action='version',
+                       version='%(prog)s ' + __version__)
+argparser.add_argument('--rcfile', '-r', action='append',
+                       help='use this config file instead of default one. ' +
+                       'You may use this option more than once.')
+
 
 def main():
     global ctime
@@ -148,6 +156,7 @@ def main():
             process_feed(feed)
 
 ### Feed parsing
+
 
 def process_feed(feed_conf):
     url = feed_conf.get('url')
@@ -169,21 +178,21 @@ def process_feed(feed_conf):
         feed['dbid'] = get_feed_dbid(cache, feed_conf)
         feed['ctime'] = datetime.datetime.now()
 
-    body_template = feed_conf.get('body',DEFAULT_BODY_TEMPLATE)
-    header_templates = feed_conf.get('headers',{})
-    for i,j in DEFAULT_HEADER_TEMPLATES.items():
+    body_template = feed_conf.get('body', DEFAULT_BODY_TEMPLATE)
+    header_templates = feed_conf.get('headers', {})
+    for i, j in DEFAULT_HEADER_TEMPLATES.items():
         header_templates.setdefault(i, j)
 
     for entry in feed['entries']:
         hashes = tuple(message_hash(feed, entry))
         if hash_cached(cache, feed, hashes):
             continue
-        
+
         patterns = {
-                'e': entry,
-                'f': feed,
-                }
-        
+            'e': entry,
+            'f': feed,
+        }
+
         headers = {}
         for header, template in header_templates.items():
             template = template.decode()
@@ -193,13 +202,13 @@ def process_feed(feed_conf):
         body = body_template.format(**patterns)
 
         message = u"{headers}\n{body}\n".format(
-                body = body,
-                headers = u''.join((
+            body=body,
+            headers=u''.join((
                     u'{header}: {value}\n'.format(
                         header=header,
                         value=value)
                     for header, value in headers.items()
-                )))
+            )))
 
         mda = subprocess.Popen(drop_command, shell=True, stdin=subprocess.PIPE)
         message = message.encode('utf-8')
@@ -213,7 +222,7 @@ def process_feed(feed_conf):
 
 ### Caching
 def init_database(cache_conf):
-    host = cache_conf.get('host',None)
+    host = cache_conf.get('host', None)
     if host is None:
         return
     host = get_cache_file(host)
@@ -226,40 +235,40 @@ def init_database(cache_conf):
     return db
 
 
-def update_db_version(conn,cur):
+def update_db_version(conn, cur):
     try:
-        cur.execute("""CREATE TABLE IF NOT EXISTS meta (version int)""");
-        cur.execute("""SELECT version FROM meta""");
+        cur.execute("""CREATE TABLE IF NOT EXISTS meta (version int)""")
+        cur.execute("""SELECT version FROM meta""")
         result = cur.fetchone()
-        if result is None: # Table was absent: either version 0 or new db
+        if result is None:  # Table was absent: either version 0 or new db
             cur.execute("""INSERT INTO meta (version)
             VALUES (?)""", (LAST_DB_VERSION,))
 
             try:
                 create_table_feeds(conn, cur)
-            except sqlite3.OperationalError: # Table 'feeds' already exists
-                old_version = 0 # => version 0 db
-            else: # Table 'feeds' was absent
-                old_version = -1 # => new db
+            except sqlite3.OperationalError:  # Table 'feeds' already exists
+                old_version = 0  # => version 0 db
+            else:  # Table 'feeds' was absent
+                old_version = -1  # => new db
                 create_table_messages(conn, cur)
                 return
-        else: # Table exist: version 1+
+        else:  # Table exist: version 1+
             old_version = result[0]
             if old_version > LAST_DB_VERSION:
                 err("Database version is more recent than supported one. "
-                        + "Please, upgrade software")
+                    + "Please, upgrade software")
             elif old_version < LAST_DB_VERSION:
                 old_version = result[0]
                 cur.execute("""UPDATE meta SET version = ?""",
-                        (LAST_DB_VERSION,))
+                            (LAST_DB_VERSION,))
             else:
                 return
 
-        info("Old db version: %s"%old_version)
-        info("Needs upgrading to: %s"%LAST_DB_VERSION)
+        info("Old db version: %s" % old_version)
+        info("Needs upgrading to: %s" % LAST_DB_VERSION)
 
         if old_version < 1:
-            convert_table_hashes_to_varchar32(conn,cur,old_version)
+            convert_table_hashes_to_varchar32(conn, cur, old_version)
 
         info("Done")
     except:
@@ -276,7 +285,7 @@ def create_table_feeds(conn, cur):
     hash VARCHAR(32),
     UNIQUE(version, hash)
     )""")
-    
+
 
 def create_table_messages(conn, cur):
     cur.execute("""CREATE TABLE messages (
@@ -288,7 +297,7 @@ def create_table_messages(conn, cur):
     PRIMARY KEY(feed, version, hash))""")
 
 
-def convert_table_hashes_to_varchar32(conn,cur,old_version):
+def convert_table_hashes_to_varchar32(conn, cur, old_version):
     cur.execute("""ALTER TABLE feeds RENAME TO feeds_v0""")
     create_table_feeds(conn, cur)
     cur.execute("""INSERT INTO feeds (id, version, hash)
@@ -304,14 +313,14 @@ def convert_table_hashes_to_varchar32(conn,cur,old_version):
 
 def get_cache_file(cachefile=None):
     in_cachefile = cachefile
-    
+
     if path.sep not in cachefile:
         dir = xdgbase.save_data_path(PROJECT_NAME)
-        cachefile = path.join(dir,cachefile)
+        cachefile = path.join(dir, cachefile)
 
     if cachefile is None:
-        warn('File "%s" not found'%in_configfile)
-    
+        warn('File "%s" not found' % in_cachefile)
+
     return cachefile
 
 
@@ -321,8 +330,8 @@ def message_hash(feed, message):
     # Version 0
     hashes.append(str(hash(message.title) ^ hash(message.summary)))
     # Version 1
-    hashes.append(hashlib.md5((message.title+u'\u9256'+message.summary).
-        encode(MD5_ENCODING)).hexdigest())
+    hashes.append(hashlib.md5((message.title + u'\u9256' + message.summary).
+                              encode(MD5_ENCODING)).hexdigest())
 
     return hashes
 
@@ -333,13 +342,13 @@ def feed_hash(feed_conf):
     hashes.append(str(hash(feed_conf['url'])))
     # Version 1
     hashes.append(hashlib.md5(feed_conf['url'].
-        encode(MD5_ENCODING)).hexdigest())
+                              encode(MD5_ENCODING)).hexdigest())
 
     return hashes
 
 
 def get_feed_dbid(cache, feed):
-    connection = cache.get('connection',None)
+    connection = cache.get('connection', None)
     if connection is None:
         return False
     cur = connection.cursor()
@@ -354,8 +363,8 @@ def get_feed_dbid(cache, feed):
                 feed_id = result[0]
                 if version < LAST_FEED_HASH_VERSION:
                     cur.execute("""UPDATE feeds SET version = ?, hash = ?
-                    WHERE id = ?""", (len(hashes)-1, hashes[-1],
-                        feed_id))
+                    WHERE id = ?""", (len(hashes) - 1, hashes[-1],
+                                      feed_id))
                 return feed_id
 
         cur.execute("""SELECT MAX(id) FROM feeds""")
@@ -366,7 +375,7 @@ def get_feed_dbid(cache, feed):
             max = result[0] or 0
         max += 1
         cur.execute("""INSERT INTO feeds (id, version, hash)
-        VALUES (?, ?, ?)""", (max, len(hashes)-1, hashes[-1]))
+        VALUES (?, ?, ?)""", (max, len(hashes) - 1, hashes[-1]))
         return max
     except:
         connection.rollback()
@@ -377,7 +386,7 @@ def get_feed_dbid(cache, feed):
 
 
 def hash_cached(cache, feed, hashes):
-    connection = cache.get('connection',None)
+    connection = cache.get('connection', None)
     if connection is None:
         return False
     cur = connection.cursor()
@@ -385,15 +394,15 @@ def hash_cached(cache, feed, hashes):
         for version, hash in enumerate(hashes):
             cur.execute("""SELECT COUNT(*) FROM messages WHERE
                 feed = ? AND version = ? AND hash = ?""",
-                (feed['dbid'], version, hash))
+                        (feed['dbid'], version, hash))
             result = cur.fetchone()[0]
             if result >= 1:
                 if version < LAST_MESSAGE_HASH_VERSION:
                     cur.execute("""UPDATE messages
                     SET version = ?, hash = ?
                     WHERE feed = ? AND version = ? AND hash = ?""",
-                    (LAST_MESSAGE_HASH_VERSION, hashes[-1],
-                        feed['dbid'], version, hash))
+                                (LAST_MESSAGE_HASH_VERSION, hashes[-1],
+                                 feed['dbid'], version, hash))
                 return True
 
         return False
@@ -406,14 +415,14 @@ def hash_cached(cache, feed, hashes):
 
 
 def cache_hash(cache, feed, hashes):
-    connection = cache.get('connection',None)
+    connection = cache.get('connection', None)
     if connection is None:
         return False
     cur = connection.cursor()
     try:
         cur.execute("""INSERT INTO messages (feed, version, hash, ctime)
         VALUES (?, ?, ?, ?)""", (feed['dbid'], LAST_MESSAGE_HASH_VERSION,
-            hashes[LAST_MESSAGE_HASH_VERSION], feed['ctime']))
+                                 hashes[LAST_MESSAGE_HASH_VERSION], feed['ctime']))
     except:
         connection.rollback()
         raise
@@ -423,4 +432,3 @@ def cache_hash(cache, feed, hashes):
 
 if __name__ == '__main__':
     main()
-
